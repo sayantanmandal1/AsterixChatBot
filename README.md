@@ -1,109 +1,162 @@
-<a href="https://chat.vercel.ai/">
-  <img alt="Next.js 14 and App Router-ready AI chatbot." src="app/(chat)/opengraph-image.png">
-  <h1 align="center">Chat SDK</h1>
-</a>
+<h1 align="center">Asterix AI Chatbot</h1>
 
 <p align="center">
-    Chat SDK is a free, open-source template built with Next.js and the AI SDK that helps you quickly build powerful chatbot applications.
+    A privacy-focused AI chatbot running entirely on your local machine with Ollama models, PostgreSQL, and Redis.
 </p>
 
 <p align="center">
-  <a href="https://chat-sdk.dev"><strong>Read Docs</strong></a> ·
   <a href="#features"><strong>Features</strong></a> ·
-  <a href="#model-providers"><strong>Model Providers</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#running-locally"><strong>Running locally</strong></a>
+  <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
+  <a href="#running-locally"><strong>Running Locally</strong></a> ·
+  <a href="#configuration"><strong>Configuration</strong></a>
 </p>
 <br/>
 
 ## Features
 
-- [Next.js](https://nextjs.org) App Router
-  - Advanced routing for seamless navigation and performance
-  - React Server Components (RSCs) and Server Actions for server-side rendering and increased performance
-- [AI SDK](https://ai-sdk.dev/docs/introduction)
-  - Unified API for generating text, structured objects, and tool calls with LLMs
-  - Hooks for building dynamic chat and generative user interfaces
-  - Supports xAI (default), OpenAI, Fireworks, and other model providers
-- [shadcn/ui](https://ui.shadcn.com)
-  - Styling with [Tailwind CSS](https://tailwindcss.com)
-  - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
-- Data Persistence
-  - [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for saving chat history and user data
-  - [Vercel Blob](https://vercel.com/storage/blob) for efficient file storage
-- [Auth.js](https://authjs.dev)
-  - Simple and secure authentication
+- **100% Local & Private** - All AI processing happens on your machine via Ollama
+- **Modern UI** - Built with Next.js 15, React 19, and shadcn/ui components
+- **Real-time Chat** - Streaming responses with the AI SDK
+- **Code Artifacts** - Generate and edit code with syntax highlighting
+- **Document Editing** - Create and modify documents with rich text editing
+- **Chat History** - Persistent conversations stored in PostgreSQL
+- **Authentication** - Secure user sessions with Auth.js
+- **File Uploads** - Local file storage for images and attachments
+- **Resumable Streams** - Continue interrupted conversations with Redis
 
-## Model Providers
+## Tech Stack
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. The default configuration includes [xAI](https://x.ai) models (`grok-2-vision-1212`, `grok-3-mini`) routed through the gateway.
+- **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS, shadcn/ui
+- **AI**: Ollama (Qwen 2.5 14B models), AI SDK
+- **Database**: PostgreSQL (Docker), Drizzle ORM
+- **Cache**: Redis (Docker)
+- **Auth**: Auth.js (NextAuth v5)
+- **Code Quality**: Ultracite (Biome), TypeScript
 
-### AI Gateway Authentication
+## AI Models
 
-**For Vercel deployments**: Authentication is handled automatically via OIDC tokens.
+This application uses local Ollama models:
 
-**For non-Vercel deployments**: You need to provide an AI Gateway API key by setting the `AI_GATEWAY_API_KEY` environment variable in your `.env.local` file.
+- **qwen2.5:14b** - Main chat model for conversations and reasoning
+- **qwen2.5-coder:14b** - Specialized model for code generation and artifacts
 
-With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
+You can easily swap these models by editing `lib/ai/providers.ts` to use any Ollama model you have installed.
 
-## Deploy Your Own
-
-You can deploy your own version of the Next.js AI Chatbot to Vercel with one click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/templates/next.js/nextjs-ai-chatbot)
-
-## Running locally
-
-This project is configured to run with local Ollama models and Docker containers for PostgreSQL and Redis.
+## Running Locally
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- [Ollama](https://ollama.ai)
-- Node.js 18+ and pnpm
+1. **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
+2. **Ollama** - [Download here](https://ollama.ai)
+3. **Node.js 18+** and **pnpm**
 
-### Quick Start
+### Installation
 
-1. **Start Docker services** (PostgreSQL and Redis):
+1. **Clone the repository**:
+```bash
+git clone <your-repo-url>
+cd chatbotnext
+```
+
+2. **Start Docker services**:
 ```bash
 docker compose up -d
 ```
 
-2. **Verify Ollama models**:
+This starts PostgreSQL and Redis containers.
+
+3. **Install Ollama models**:
+```bash
+ollama pull qwen2.5:14b
+ollama pull qwen2.5-coder:14b
+```
+
+Verify models are installed:
 ```bash
 ollama list
 ```
 
-Required models: `qwen2.5:14b` and `qwen2.5-coder:14b`
-
-3. **Install dependencies**:
+4. **Install dependencies**:
 ```bash
 pnpm install
 ```
 
-4. **Run database migrations**:
+5. **Run database migrations**:
 ```bash
 pnpm db:migrate
 ```
 
-5. **Start the development server**:
+6. **Start the development server**:
 ```bash
 pnpm dev
 ```
 
-Or use the startup script:
-```powershell
-.\start-dev.ps1
+The app will be available at [http://localhost:3000](http://localhost:3000)
+
+### Stopping Services
+
+Stop Docker containers:
+```bash
+docker compose down
 ```
 
-Your app should now be running on [localhost:3000](http://localhost:3000).
+To remove all data:
+```bash
+docker compose down -v
+```
 
-### Configuration
+## Configuration
 
-Environment variables are in `.env.local`:
-- `OLLAMA_BASE_URL` - Ollama API endpoint (default: http://localhost:11434)
-- `POSTGRES_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `AUTH_SECRET` - Session encryption key
+Environment variables in `.env.local`:
 
-See [README.local.md](README.local.md) for detailed setup instructions and troubleshooting.
+```env
+# Session encryption (change in production)
+AUTH_SECRET=your-secret-key-here
+
+# Ollama API endpoint
+OLLAMA_BASE_URL=http://localhost:11434
+
+# PostgreSQL connection
+POSTGRES_URL=postgresql://chatbot:chatbot_dev_password@localhost:5432/chatbot
+
+# Redis connection
+REDIS_URL=redis://localhost:6379
+```
+
+## Available Scripts
+
+- `pnpm dev` - Start development server with Turbo
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Check code with Ultracite
+- `pnpm format` - Format code with Ultracite
+- `pnpm db:migrate` - Run database migrations
+- `pnpm db:studio` - Open Drizzle Studio (database GUI)
+- `pnpm test` - Run Playwright tests
+
+## Troubleshooting
+
+### Ollama Connection Issues
+
+Check if Ollama is running:
+```bash
+curl http://localhost:11434/api/tags
+```
+
+### Database Connection Issues
+
+Check PostgreSQL logs:
+```bash
+docker compose logs postgres
+```
+
+### Redis Connection Issues
+
+Check Redis logs:
+```bash
+docker compose logs redis
+```
+
+## License
+
+MIT
