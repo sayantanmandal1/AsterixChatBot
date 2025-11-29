@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Hyperspeed from "@/components/background/background";
@@ -9,8 +11,10 @@ export default function LandingPage() {
       <div className="absolute inset-0 z-0">
         <Hyperspeed
           effectOptions={{
-            onSpeedUp: () => {},
-            onSlowDown: () => {},
+            // biome-ignore lint/complexity/useArrowFunction: Required for interactive speed control
+            onSpeedUp() {},
+            // biome-ignore lint/complexity/useArrowFunction: Required for interactive speed control
+            onSlowDown() {},
             distortion: "turbulentDistortion",
             length: 400,
             roadWidth: 10,

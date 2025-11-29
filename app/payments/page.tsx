@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowLeft, Check, Crown, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import Hyperspeed from "@/components/background/background";
@@ -86,8 +88,10 @@ export default function PaymentsPage() {
       <div className="fixed inset-0 z-0">
         <Hyperspeed
           effectOptions={{
-            onSpeedUp: () => {},
-            onSlowDown: () => {},
+            // biome-ignore lint/complexity/useArrowFunction: Required for interactive speed control
+            onSpeedUp() {},
+            // biome-ignore lint/complexity/useArrowFunction: Required for interactive speed control
+            onSlowDown() {},
             distortion: "deepDistortion",
             length: 400,
             roadWidth: 18,
