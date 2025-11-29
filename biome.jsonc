@@ -5,6 +5,7 @@
     "includes": [
       "**/*",
       "!components/ui",
+      "!components/background/background.tsx",
       "!lib/utils.ts",
       "!hooks/use-mobile.ts"
     ]
