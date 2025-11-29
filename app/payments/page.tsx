@@ -83,7 +83,7 @@ const plans = [
 
 export default function PaymentsPage() {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="relative h-screen w-full overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 z-0">
         <Hyperspeed
@@ -130,29 +130,28 @@ export default function PaymentsPage() {
       </div>
 
       {/* Content */}
-      <div className="pointer-events-none relative z-10 px-4 py-16">
+      <div className="pointer-events-none relative z-10 flex h-full flex-col px-4 py-8">
         {/* Back Button */}
         <Link
-          className="group pointer-events-auto mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-2 text-gray-300 text-sm backdrop-blur-sm transition-all hover:bg-white/10"
+          className="group pointer-events-auto mb-4 inline-flex w-fit items-center gap-2 rounded-xl bg-white/10 px-4 py-2 font-medium text-sm text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20"
           href="/"
         >
           <ArrowLeft className="group-hover:-translate-x-1 h-4 w-4 transition-transform" />
-          Back to Home
+          <span>Back</span>
         </Link>
 
         {/* Header */}
-        <div className="pointer-events-auto mb-16 text-center">
-          <h1 className="mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text font-bold text-5xl text-transparent tracking-tight md:text-6xl lg:text-7xl">
+        <div className="pointer-events-auto mb-6 text-center">
+          <h1 className="mb-2 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text font-bold text-4xl text-transparent tracking-tight md:text-5xl">
             Choose Your Path
           </h1>
-          <p className="mx-auto max-w-2xl text-gray-300 text-lg md:text-xl">
-            Unlock the full potential of AI-powered conversations. Select the
-            plan that fits your ambitions.
+          <p className="mx-auto max-w-2xl text-gray-300 text-sm md:text-base">
+            Unlock the full potential of AI-powered conversations
           </p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="pointer-events-auto mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="pointer-events-auto mx-auto grid w-full max-w-7xl flex-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
@@ -168,38 +167,41 @@ export default function PaymentsPage() {
                   </div>
                 )}
 
-                <div className="relative h-full rounded-3xl bg-black/60 p-8 backdrop-blur-xl">
-                  {/* Icon */}
-                  <div className="mb-6 flex items-center justify-between">
-                    <Icon className="h-8 w-8 text-white" />
+                <div className="relative flex h-full flex-col rounded-3xl bg-black/60 p-4 backdrop-blur-xl md:p-6">
+                  {/* Icon & Name */}
+                  <div className="mb-3 flex items-center justify-between">
+                    <Icon className="h-6 w-6 text-white" />
                   </div>
 
-                  {/* Plan Name */}
-                  <h3 className="mb-2 font-bold text-2xl text-white">
+                  <h3 className="mb-1 font-bold text-white text-xl">
                     {plan.name}
                   </h3>
 
                   {/* Price */}
                   <div className="mb-2">
-                    <span className="font-bold text-4xl text-white">
+                    <span className="font-bold text-3xl text-white">
                       {plan.price}
                     </span>
-                    <span className="ml-2 text-gray-400">/{plan.period}</span>
+                    <span className="ml-1 text-gray-400 text-xs">
+                      /{plan.period}
+                    </span>
                   </div>
 
-                  {/* Description */}
-                  <p className="mb-6 text-gray-400 text-sm">
-                    {plan.description}
-                  </p>
-
                   {/* Features */}
-                  <ul className="mb-8 space-y-3">
-                    {plan.features.map((feature) => (
-                      <li className="flex items-start gap-3" key={feature}>
-                        <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
-                        <span className="text-gray-300 text-sm">{feature}</span>
+                  <ul className="mb-4 flex-1 space-y-1.5">
+                    {plan.features.slice(0, 5).map((feature) => (
+                      <li className="flex items-start gap-2" key={feature}>
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                        <span className="text-gray-300 text-xs leading-tight">
+                          {feature}
+                        </span>
                       </li>
                     ))}
+                    {plan.features.length > 5 && (
+                      <li className="text-gray-400 text-xs">
+                        +{plan.features.length - 5} more features
+                      </li>
+                    )}
                   </ul>
 
                   {/* CTA Button */}
@@ -208,10 +210,10 @@ export default function PaymentsPage() {
                       plan.popular
                         ? "from-purple-500 to-pink-500"
                         : "from-white/10 to-white/5"
-                    } px-6 py-3 font-semibold text-white transition-all hover:scale-105 hover:shadow-lg`}
+                    } px-4 py-2 font-semibold text-sm text-white transition-all hover:scale-105 hover:shadow-lg`}
                     type="button"
                   >
-                    {plan.price === "$0" ? "Get Started" : "Subscribe Now"}
+                    {plan.price === "$0" ? "Get Started" : "Subscribe"}
                   </button>
                 </div>
               </div>
@@ -219,18 +221,15 @@ export default function PaymentsPage() {
           })}
         </div>
 
-        {/* FAQ or Additional Info */}
-        <div className="pointer-events-auto mx-auto mt-16 max-w-3xl text-center">
-          <p className="text-gray-400">
-            All plans include a 14-day money-back guarantee. No questions asked.
-          </p>
-          <p className="mt-2 text-gray-500 text-sm">
-            Need a custom solution?{" "}
+        {/* Footer */}
+        <div className="pointer-events-auto mt-4 text-center">
+          <p className="text-gray-400 text-xs">
+            14-day money-back guarantee •{" "}
             <a
               className="text-cyan-400 hover:underline"
               href="mailto:sales@example.com"
             >
-              Contact our sales team
+              Contact sales
             </a>
           </p>
         </div>
