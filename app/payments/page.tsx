@@ -130,10 +130,10 @@ export default function PaymentsPage() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 px-4 py-16">
+      <div className="pointer-events-none relative z-10 px-4 py-16">
         {/* Back Button */}
         <Link
-          className="group mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-2 text-gray-300 text-sm backdrop-blur-sm transition-all hover:bg-white/10"
+          className="group pointer-events-auto mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-2 text-gray-300 text-sm backdrop-blur-sm transition-all hover:bg-white/10"
           href="/"
         >
           <ArrowLeft className="group-hover:-translate-x-1 h-4 w-4 transition-transform" />
@@ -141,7 +141,7 @@ export default function PaymentsPage() {
         </Link>
 
         {/* Header */}
-        <div className="mb-16 text-center">
+        <div className="pointer-events-auto mb-16 text-center">
           <h1 className="mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text font-bold text-5xl text-transparent tracking-tight md:text-6xl lg:text-7xl">
             Choose Your Path
           </h1>
@@ -152,7 +152,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="pointer-events-auto mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
@@ -220,7 +220,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* FAQ or Additional Info */}
-        <div className="mx-auto mt-16 max-w-3xl text-center">
+        <div className="pointer-events-auto mx-auto mt-16 max-w-3xl text-center">
           <p className="text-gray-400">
             All plans include a 14-day money-back guarantee. No questions asked.
           </p>

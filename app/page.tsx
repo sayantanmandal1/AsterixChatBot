@@ -53,9 +53,9 @@ export default function LandingPage() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-4">
+      <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-center px-4">
         {/* Hero Text */}
-        <div className="mb-16 max-w-4xl text-center">
+        <div className="pointer-events-auto mb-16 max-w-4xl text-center">
           <h1 className="mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text font-bold text-6xl text-transparent tracking-tight md:text-7xl lg:text-8xl">
             Transcend Reality
           </h1>
@@ -71,7 +71,7 @@ export default function LandingPage() {
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col gap-6 sm:flex-row">
+        <div className="pointer-events-auto flex flex-col gap-6 sm:flex-row">
           {/* Chat Button */}
           <Link
             className="group relative overflow-hidden rounded-2xl bg-linear-to-r from-purple-500/20 to-pink-500/20 p-[2px] backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
@@ -100,7 +100,7 @@ export default function LandingPage() {
         </div>
 
         {/* Feature Pills */}
-        <div className="mt-16 flex flex-wrap justify-center gap-4">
+        <div className="pointer-events-auto mt-16 flex flex-wrap justify-center gap-4">
           {[
             "Powered by Ollama",
             "100% Local",
