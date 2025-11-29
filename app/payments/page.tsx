@@ -162,7 +162,7 @@ export default function PaymentsPage() {
                 key={plan.name}
               >
                 {plan.popular && (
-                  <div className="-right-12 absolute top-8 rotate-45 bg-gradient-to-r from-purple-500 to-pink-500 px-12 py-1 font-bold text-white text-xs">
+                  <div className="-right-12 absolute top-8 z-10 rotate-45 bg-linear-to-r from-purple-500 to-pink-500 px-12 py-1 font-bold text-white text-xs">
                     POPULAR
                   </div>
                 )}
