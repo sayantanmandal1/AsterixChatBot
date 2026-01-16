@@ -1,7 +1,10 @@
 import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
+  decimal,
   foreignKey,
+  index,
+  integer,
   json,
   jsonb,
   pgTable,
@@ -171,3 +174,106 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// Credit-Based System Tables
+
+export const creditBalance = pgTable(
+  "CreditBalance",
+  {
+    userId: uuid("userId")
+      .primaryKey()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    balance: decimal("balance", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0.00"),
+    lastMonthlyAllocation: timestamp("lastMonthlyAllocation"),
+    isNewUser: boolean("isNewUser").notNull().default(true),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("creditBalance_userId_idx").on(table.userId),
+  })
+);
+
+export type CreditBalance = InferSelectModel<typeof creditBalance>;
+
+export const creditTransaction = pgTable(
+  "CreditTransaction",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    balanceAfter: decimal("balanceAfter", { precision: 10, scale: 2 }).notNull(),
+    description: text("description"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("creditTransaction_userId_idx").on(table.userId),
+    createdAtIdx: index("creditTransaction_createdAt_idx").on(table.createdAt),
+    userIdCreatedAtIdx: index("creditTransaction_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  })
+);
+
+export type CreditTransaction = InferSelectModel<typeof creditTransaction>;
+
+export const subscriptionPlan = pgTable("SubscriptionPlan", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  credits: decimal("credits", { precision: 10, scale: 2 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").notNull().default(true),
+  displayOrder: integer("displayOrder").notNull().default(0),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type SubscriptionPlan = InferSelectModel<typeof subscriptionPlan>;
+
+export const userPurchase = pgTable(
+  "UserPurchase",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    planId: uuid("planId")
+      .notNull()
+      .references(() => subscriptionPlan.id),
+    creditsAdded: decimal("creditsAdded", { precision: 10, scale: 2 }).notNull(),
+    amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).notNull(),
+    status: varchar("status", { length: 20 })
+      .notNull()
+      .default("completed"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("userPurchase_userId_idx").on(table.userId),
+    createdAtIdx: index("userPurchase_createdAt_idx").on(table.createdAt),
+    userIdCreatedAtIdx: index("userPurchase_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  })
+);
+
+export type UserPurchase = InferSelectModel<typeof userPurchase>;
+
+export const guestSession = pgTable("GuestSession", {
+  sessionId: varchar("sessionId", { length: 255 }).primaryKey().notNull(),
+  balance: decimal("balance", { precision: 10, scale: 2 })
+    .notNull()
+    .default("200.00"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+
+export type GuestSession = InferSelectModel<typeof guestSession>;

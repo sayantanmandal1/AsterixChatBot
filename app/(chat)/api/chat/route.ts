@@ -39,6 +39,14 @@ import {
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
+import {
+  calculateCredits,
+  deductCredits,
+  deductGuestCredits,
+  getBalance,
+  getGuestBalance,
+} from "@/lib/services/credit-service";
+import { initializeGuestSession } from "@/lib/services/session-service";
 import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
@@ -125,6 +133,38 @@ export async function POST(request: Request) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
 
+    // Check credit balance before message generation
+    let currentBalance: number;
+    const isGuestUser = userType === "guest";
+
+    try {
+      if (isGuestUser) {
+        // For guest users, try to get balance or initialize session
+        try {
+          currentBalance = await getGuestBalance(session.user.id);
+        } catch (error) {
+          // If guest session doesn't exist, initialize it
+          await initializeGuestSession(session.user.id);
+          currentBalance = 200.0;
+        }
+      } else {
+        // For authenticated users, get balance
+        const balance = await getBalance(session.user.id);
+        currentBalance = Number.parseFloat(balance.balance);
+      }
+
+      // Check if user has any credits
+      if (currentBalance <= 0) {
+        return new ChatSDKError("bad_request:credits").toResponse();
+      }
+    } catch (error) {
+      console.error("Failed to check credit balance:", error);
+      if (error instanceof ChatSDKError) {
+        return error.toResponse();
+      }
+      return new ChatSDKError("bad_request:database").toResponse();
+    }
+
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
 
@@ -176,6 +216,9 @@ export async function POST(request: Request) {
     await createStreamId({ streamId, chatId: id });
 
     let finalMergedUsage: AppUsage | undefined;
+    let generatedText = "";
+    let creditsConsumed = 0;
+    let creditDeductionError: Error | null = null;
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
@@ -207,7 +250,10 @@ export async function POST(request: Request) {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",
           },
-          onFinish: async ({ usage }) => {
+          onFinish: async ({ usage, text }) => {
+            // Capture generated text for credit calculation
+            generatedText = text || "";
+            
             try {
               const providers = await getTokenlensCatalog();
               const modelId =
@@ -276,6 +322,40 @@ export async function POST(request: Request) {
           } catch (err) {
             console.warn("Unable to persist last usage for chat", id, err);
           }
+        }
+
+        // Deduct credits after successful message generation
+        try {
+          // Calculate credits based on generated text
+          creditsConsumed = calculateCredits(generatedText);
+
+          if (creditsConsumed > 0) {
+            if (isGuestUser) {
+              // Deduct credits from guest session
+              await deductGuestCredits(session.user.id, creditsConsumed);
+            } else {
+              // Deduct credits from authenticated user
+              await deductCredits({
+                userId: session.user.id,
+                amount: creditsConsumed,
+                description: `Message generation in chat ${id}`,
+                metadata: {
+                  chatId: id,
+                  messageLength: generatedText.length,
+                  modelId: selectedChatModel,
+                },
+              });
+            }
+
+            console.log(
+              `Credits deducted: ${creditsConsumed} for user ${session.user.id}`
+            );
+          }
+        } catch (error) {
+          // Log credit deduction error but don't fail the request
+          // The message has already been generated and saved
+          console.error("Failed to deduct credits:", error);
+          creditDeductionError = error as Error;
         }
       },
       onError: () => {

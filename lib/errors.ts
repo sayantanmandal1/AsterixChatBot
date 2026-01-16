@@ -16,7 +16,8 @@ export type Surface =
   | "vote"
   | "document"
   | "suggestions"
-  | "activate_gateway";
+  | "activate_gateway"
+  | "credits";
 
 export type ErrorCode = `${ErrorType}:${Surface}`;
 
@@ -33,6 +34,7 @@ export const visibilityBySurface: Record<Surface, ErrorVisibility> = {
   document: "response",
   suggestions: "response",
   activate_gateway: "response",
+  credits: "response",
 };
 
 export class ChatSDKError extends Error {
@@ -111,6 +113,11 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return "You need to sign in to view this document. Please sign in and try again.";
     case "bad_request:document":
       return "The request to create or update the document was invalid. Please check your input and try again.";
+
+    case "bad_request:credits":
+      return "Insufficient credits to complete this request. Please purchase more credits to continue.";
+    case "unauthorized:credits":
+      return "You need to sign in to access credit information. Please sign in and try again.";
 
     default:
       return "Something went wrong. Please try again later.";

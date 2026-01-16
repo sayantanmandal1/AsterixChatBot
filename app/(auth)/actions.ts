@@ -3,8 +3,15 @@
 import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { creditBalance } from "@/lib/db/schema";
 
 import { signIn } from "./auth";
+
+// biome-ignore lint: Forbidden non-null assertion.
+const client = postgres(process.env.POSTGRES_URL!);
+const db = drizzle(client);
 
 const authFormSchema = z.object({
   email: z.string().email(),
@@ -66,7 +73,20 @@ export const register = async (
     if (user) {
       return { status: "user_exists" } as RegisterActionState;
     }
-    await createUser(validatedData.email, validatedData.password);
+    
+    // Create user
+    const [newUser] = await createUser(validatedData.email, validatedData.password);
+    
+    // Initialize credit balance record for new user
+    // The bonus will be allocated on first login via allocateNewUserBonus
+    await db.insert(creditBalance).values({
+      userId: newUser.id,
+      balance: "0.00",
+      isNewUser: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,

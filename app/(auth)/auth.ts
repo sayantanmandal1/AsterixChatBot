@@ -4,6 +4,7 @@ import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import { createGuestUser, getUser } from "@/lib/db/queries";
+import { allocateNewUserBonus } from "@/lib/services/credit-service";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -75,10 +76,21 @@ export const {
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
+        
+        // Allocate new user bonus for regular users on first login
+        if (user.type === "regular") {
+          try {
+            await allocateNewUserBonus(user.id as string);
+          } catch (error) {
+            // If bonus allocation fails (e.g., already allocated), continue silently
+            // The allocateNewUserBonus function will throw an error if already allocated
+            console.log("Bonus allocation skipped or failed:", error);
+          }
+        }
       }
 
       return token;
