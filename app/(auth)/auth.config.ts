@@ -10,4 +10,27 @@ export const authConfig = {
     // while this file is also used in non-Node.js environments
   ],
   callbacks: {},
+  // CSRF protection is enabled by default in NextAuth v5
+  // Explicitly configure for clarity
+  useSecureCookies: process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Host-" : ""}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 } satisfies NextAuthConfig;

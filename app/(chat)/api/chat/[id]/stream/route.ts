@@ -37,20 +37,16 @@ export async function GET(
   let chat: Chat | null;
 
   try {
-    chat = await getChatById({ id: chatId });
+    chat = await getChatById({ id: chatId, userId: session.user.id });
   } catch {
     return new ChatSDKError("not_found:chat").toResponse();
   }
 
   if (!chat) {
-    return new ChatSDKError("not_found:chat").toResponse();
-  }
-
-  if (chat.visibility === "private" && chat.userId !== session.user.id) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
-  const streamIds = await getStreamIdsByChatId({ chatId });
+  const streamIds = await getStreamIdsByChatId({ chatId, userId: session.user.id });
 
   if (!streamIds.length) {
     return new ChatSDKError("not_found:stream").toResponse();
@@ -76,7 +72,7 @@ export async function GET(
    * but the resumable stream has concluded at this point.
    */
   if (!stream) {
-    const messages = await getMessagesByChatId({ id: chatId });
+    const messages = await getMessagesByChatId({ id: chatId, userId: session.user.id });
     const mostRecentMessage = messages.at(-1);
 
     if (!mostRecentMessage) {

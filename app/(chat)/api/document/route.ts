@@ -24,15 +24,11 @@ export async function GET(request: Request) {
     return new ChatSDKError("unauthorized:document").toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, userId: session.user.id });
 
   const [document] = documents;
 
   if (!document) {
-    return new ChatSDKError("not_found:document").toResponse();
-  }
-
-  if (document.userId !== session.user.id) {
     return new ChatSDKError("forbidden:document").toResponse();
   }
 
@@ -63,14 +59,11 @@ export async function POST(request: Request) {
   }: { content: string; title: string; kind: ArtifactKind } =
     await request.json();
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, userId: session.user.id });
 
   if (documents.length > 0) {
-    const [doc] = documents;
-
-    if (doc.userId !== session.user.id) {
-      return new ChatSDKError("forbidden:document").toResponse();
-    }
+    // Document exists and belongs to user (already filtered by userId)
+    // No additional check needed
   }
 
   const document = await saveDocument({
@@ -109,17 +102,18 @@ export async function DELETE(request: Request) {
     return new ChatSDKError("unauthorized:document").toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getDocumentsById({ id, userId: session.user.id });
 
   const [document] = documents;
 
-  if (document.userId !== session.user.id) {
+  if (!document) {
     return new ChatSDKError("forbidden:document").toResponse();
   }
 
   const documentsDeleted = await deleteDocumentsByIdAfterTimestamp({
     id,
     timestamp: new Date(timestamp),
+    userId: session.user.id,
   });
 
   return Response.json(documentsDeleted, { status: 200 });

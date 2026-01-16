@@ -165,15 +165,12 @@ export async function POST(request: Request) {
       return new ChatSDKError("bad_request:database").toResponse();
     }
 
-    const chat = await getChatById({ id });
+    const chat = await getChatById({ id, userId: session.user.id });
     let messagesFromDb: DBMessage[] = [];
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
-      }
       // Only fetch messages if chat already exists
-      messagesFromDb = await getMessagesByChatId({ id });
+      messagesFromDb = await getMessagesByChatId({ id, userId: session.user.id });
     } else {
       const title = await generateTitleFromUserMessage({
         message,
@@ -219,9 +216,11 @@ export async function POST(request: Request) {
     let generatedText = "";
     let creditsConsumed = 0;
     let creditDeductionError: Error | null = null;
+    let dataStreamWriter: any = null;
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
+        dataStreamWriter = dataStream;
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
@@ -330,12 +329,14 @@ export async function POST(request: Request) {
           creditsConsumed = calculateCredits(generatedText);
 
           if (creditsConsumed > 0) {
+            let newBalance: number;
+            
             if (isGuestUser) {
               // Deduct credits from guest session
-              await deductGuestCredits(session.user.id, creditsConsumed);
+              newBalance = await deductGuestCredits(session.user.id, creditsConsumed);
             } else {
               // Deduct credits from authenticated user
-              await deductCredits({
+              const transaction = await deductCredits({
                 userId: session.user.id,
                 amount: creditsConsumed,
                 description: `Message generation in chat ${id}`,
@@ -345,11 +346,23 @@ export async function POST(request: Request) {
                   modelId: selectedChatModel,
                 },
               });
+              newBalance = Number.parseFloat(transaction.balanceAfter);
             }
 
             console.log(
-              `Credits deducted: ${creditsConsumed} for user ${session.user.id}`
+              `Credits deducted: ${creditsConsumed} for user ${session.user.id}, new balance: ${newBalance}`
             );
+
+            // Send credit information to the client
+            if (dataStreamWriter) {
+              dataStreamWriter.write({
+                type: "data-credits",
+                data: {
+                  consumed: creditsConsumed,
+                  newBalance: newBalance,
+                },
+              });
+            }
           }
         } catch (error) {
           // Log credit deduction error but don't fail the request
@@ -410,13 +423,13 @@ export async function DELETE(request: Request) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
-  const chat = await getChatById({ id });
+  const chat = await getChatById({ id, userId: session.user.id });
 
-  if (chat?.userId !== session.user.id) {
+  if (!chat) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
-  const deletedChat = await deleteChatById({ id });
+  const deletedChat = await deleteChatById({ id, userId: session.user.id });
 
   return Response.json(deletedChat, { status: 200 });
 }

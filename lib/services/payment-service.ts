@@ -3,33 +3,81 @@ import "server-only";
 import { asc, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { ChatSDKError } from "../errors";
+import { createClient } from "redis";
 import {
   type SubscriptionPlan,
-  type UserPurchase,
   subscriptionPlan,
+  type UserPurchase,
   userPurchase,
 } from "../db/schema";
+import { ChatSDKError } from "../errors";
 import { addCredits } from "./credit-service";
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
+// Redis client for caching
+let redisClient: ReturnType<typeof createClient> | null = null;
+
+async function getRedisClient() {
+  if (!process.env.REDIS_URL) {
+    return null;
+  }
+
+  if (!redisClient) {
+    redisClient = createClient({
+      url: process.env.REDIS_URL,
+    });
+
+    redisClient.on("error", (err) => {
+      console.error("Redis Client Error:", err);
+    });
+
+    await redisClient.connect();
+  }
+
+  return redisClient;
+}
+
+const PLANS_CACHE_KEY = "subscription:plans";
+const PLANS_CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
+
 /**
  * Get all available subscription plans.
  * Plans are sorted by credit amount from lowest to highest.
- * 
+ * Uses Redis cache with 24-hour TTL for performance.
+ *
  * @returns Array of active subscription plans sorted by credits
  * @throws ChatSDKError if database query fails
  */
 export async function getAvailablePlans(): Promise<SubscriptionPlan[]> {
   try {
+    const redis = await getRedisClient();
+
+    // Try to get from cache first
+    if (redis) {
+      const cachedPlans = await redis.get(PLANS_CACHE_KEY);
+      if (cachedPlans) {
+        console.log("Subscription plans retrieved from cache");
+        return JSON.parse(cachedPlans) as SubscriptionPlan[];
+      }
+    }
+
+    // If not in cache, fetch from database
     const plans = await db
       .select()
       .from(subscriptionPlan)
       .where(eq(subscriptionPlan.isActive, true))
       .orderBy(asc(subscriptionPlan.credits));
+
+    // Cache the results if Redis is available
+    if (redis && plans.length > 0) {
+      await redis.set(PLANS_CACHE_KEY, JSON.stringify(plans), {
+        EX: PLANS_CACHE_TTL,
+      });
+      console.log("Subscription plans cached in Redis");
+    }
 
     return plans;
   } catch (error) {
@@ -43,7 +91,7 @@ export async function getAvailablePlans(): Promise<SubscriptionPlan[]> {
 
 /**
  * Get a specific subscription plan by ID.
- * 
+ *
  * @param planId - The subscription plan ID
  * @returns The subscription plan or null if not found
  * @throws ChatSDKError if database query fails
@@ -70,7 +118,7 @@ export async function getPlanById(
 /**
  * Process a subscription plan purchase.
  * Uses database transaction to add credits and record purchase atomically.
- * 
+ *
  * @param params - Purchase parameters
  * @param params.userId - The user's ID
  * @param params.planId - The subscription plan ID
@@ -113,7 +161,7 @@ export async function processPurchase(params: {
       // Add credits to user's account (this will handle its own transaction internally)
       // Note: We need to call this outside the transaction to avoid nested transactions
       // So we'll do it after creating the purchase record
-      
+
       // Create purchase record
       const [purchase] = await tx
         .insert(userPurchase)
@@ -158,7 +206,7 @@ export async function processPurchase(params: {
 /**
  * Get purchase history for a user.
  * Supports pagination with limit and offset.
- * 
+ *
  * @param params - Query parameters
  * @param params.userId - The user's ID
  * @param params.limit - Maximum number of purchases to return (default: 50)
@@ -188,6 +236,29 @@ export async function getPurchaseHistory(params: {
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get purchase history"
+    );
+  }
+}
+
+/**
+ * Invalidate the subscription plans cache.
+ * Should be called when plans are created, updated, or deleted.
+ *
+ * @throws ChatSDKError if cache invalidation fails
+ */
+export async function invalidatePlansCache(): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+
+    if (redis) {
+      await redis.del(PLANS_CACHE_KEY);
+      console.log("Subscription plans cache invalidated");
+    }
+  } catch (error) {
+    console.error("Failed to invalidate plans cache:", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to invalidate plans cache"
     );
   }
 }

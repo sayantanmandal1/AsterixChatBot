@@ -2,6 +2,8 @@ import { auth } from "@/app/(auth)/auth";
 import { ChatSDKError } from "@/lib/errors";
 import { getBalance } from "@/lib/services/credit-service";
 import { getPurchaseHistory } from "@/lib/services/payment-service";
+import { RATE_LIMITS, withRateLimit } from "@/lib/rate-limit";
+import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -23,12 +25,13 @@ const db = drizzle(client);
  * 
  * @returns User profile with credit balance and active plan
  */
-export async function GET() {
+async function handler(request: NextRequest) {
   try {
     const session = await auth();
 
     // Validate authentication
     if (!session?.user) {
+      console.warn("Unauthenticated request to user profile endpoint");
       return new ChatSDKError(
         "unauthorized:chat",
         "Authentication required to view profile"
@@ -37,6 +40,9 @@ export async function GET() {
 
     // Guest users should not access this endpoint
     if (session.user.type === "guest") {
+      console.warn("Guest user attempted to access profile", {
+        sessionId: session.user.id,
+      });
       return new ChatSDKError(
         "unauthorized:chat",
         "Guest users cannot access profile. Please register for an account."
@@ -52,6 +58,7 @@ export async function GET() {
       .where(eq(user.id, userId));
 
     if (!userData) {
+      console.error("User not found in database", { userId });
       return new ChatSDKError(
         "not_found:database",
         "User not found"
@@ -90,6 +97,12 @@ export async function GET() {
       }
     }
 
+    console.log("User profile retrieved successfully", {
+      userId,
+      hasActivePlan: activePlan !== null,
+      balance: creditBalance.balance,
+    });
+
     // Format response
     return Response.json({
       user: {
@@ -110,10 +123,16 @@ export async function GET() {
       return error.toResponse();
     }
 
-    console.error("Failed to get user profile:", error);
+    console.error("Failed to get user profile via API", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return new ChatSDKError(
       "bad_request:api",
       "Failed to retrieve user profile"
     ).toResponse();
   }
 }
+
+// Export with rate limiting
+export const GET = withRateLimit(handler, RATE_LIMITS.USER_PROFILE);

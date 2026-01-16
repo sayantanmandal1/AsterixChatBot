@@ -2,12 +2,15 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { ChatSDKError } from "@/lib/errors";
 import { getTransactionHistory } from "@/lib/services/credit-service";
+import { RATE_LIMITS, withRateLimit } from "@/lib/rate-limit";
+import { transactionHistoryQuerySchema, validateQueryParams } from "@/lib/validation/schemas";
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   try {
     const session = await auth();
 
     if (!session?.user) {
+      console.warn("Unauthenticated request to transaction history endpoint");
       return new ChatSDKError(
         "unauthorized:chat",
         "Authentication required to view transaction history"
@@ -16,6 +19,9 @@ export async function GET(request: NextRequest) {
 
     // Guest users don't have transaction history
     if (session.user.type === "guest") {
+      console.log("Guest user requested transaction history", {
+        sessionId: session.user.id,
+      });
       return Response.json({
         transactions: [],
         total: 0,
@@ -24,27 +30,33 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = request.nextUrl;
-    const limit = Number.parseInt(searchParams.get("limit") || "10", 10);
-    const offset = Number.parseInt(searchParams.get("offset") || "0", 10);
+    const validation = validateQueryParams(transactionHistoryQuerySchema, {
+      limit: searchParams.get("limit"),
+      offset: searchParams.get("offset"),
+    });
 
-    // Validate pagination parameters
-    if (limit < 1 || limit > 100) {
+    if (!validation.success) {
+      console.warn("Invalid pagination parameters", {
+        errors: validation.errors,
+      });
       return new ChatSDKError(
         "bad_request:api",
-        "Limit must be between 1 and 100"
+        `Invalid query parameters: ${validation.errors}`
       ).toResponse();
     }
 
-    if (offset < 0) {
-      return new ChatSDKError(
-        "bad_request:api",
-        "Offset must be non-negative"
-      ).toResponse();
-    }
+    const { limit, offset } = validation.data;
 
     // Get transaction history
     const transactions = await getTransactionHistory({
       userId: session.user.id,
+      limit,
+      offset,
+    });
+
+    console.log("Transaction history retrieved successfully", {
+      userId: session.user.id,
+      count: transactions.length,
       limit,
       offset,
     });
@@ -71,10 +83,16 @@ export async function GET(request: NextRequest) {
       return error.toResponse();
     }
 
-    console.error("Failed to get transaction history:", error);
+    console.error("Failed to get transaction history via API", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return new ChatSDKError(
       "bad_request:api",
       "Failed to retrieve transaction history"
     ).toResponse();
   }
 }
+
+// Export with rate limiting
+export const GET = withRateLimit(handler, RATE_LIMITS.CREDIT_TRANSACTIONS);

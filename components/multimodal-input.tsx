@@ -63,6 +63,7 @@ function PureMultimodalInput({
   selectedModelId,
   onModelChange,
   usage,
+  disabled,
 }: {
   chatId: string;
   input: string;
@@ -79,6 +80,7 @@ function PureMultimodalInput({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
   usage?: AppUsage;
+  disabled?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -360,10 +362,11 @@ function PureMultimodalInput({
             maxHeight={200}
             minHeight={44}
             onChange={handleInput}
-            placeholder="Send a message..."
+            placeholder={disabled ? "Insufficient credits" : "Send a message..."}
             ref={textareaRef}
             rows={1}
             value={input}
+            disabled={disabled}
           />{" "}
           <Context {...contextProps} />
         </div>
@@ -385,7 +388,7 @@ function PureMultimodalInput({
           ) : (
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-              disabled={!input.trim() || uploadQueue.length > 0}
+              disabled={!input.trim() || uploadQueue.length > 0 || disabled}
               status={status}
 	      data-testid="send-button"
             >

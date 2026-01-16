@@ -34,6 +34,7 @@ const PurePreviewMessage = ({
   regenerate,
   isReadonly,
   requiresScrollPadding,
+  creditsConsumed,
 }: {
   chatId: string;
   message: ChatMessage;
@@ -43,6 +44,7 @@ const PurePreviewMessage = ({
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
   requiresScrollPadding: boolean;
+  creditsConsumed?: number;
 }) => {
   const [mode, setMode] = useState<"view" | "edit">("view");
 
@@ -140,6 +142,13 @@ const PurePreviewMessage = ({
                     >
                       <Response>{sanitizeText(part.text)}</Response>
                     </MessageContent>
+                    {message.role === "assistant" && creditsConsumed !== undefined && creditsConsumed > 0 && (
+                      <div className="mt-2 flex items-center gap-1 text-muted-foreground text-xs">
+                        <span className="rounded-full bg-muted px-2 py-0.5">
+                          {creditsConsumed.toFixed(2)} credits
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               }

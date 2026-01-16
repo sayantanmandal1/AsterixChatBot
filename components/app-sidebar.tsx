@@ -10,6 +10,7 @@ import { unstable_serialize } from "swr/infinite";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { SidebarHistory, getChatHistoryPaginationKey } from "@/components/sidebar-history";
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
+import { CreditMeterWrapper } from "@/components/credit-meter-wrapper";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -115,7 +116,68 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarContent>
           <SidebarHistory user={user} />
         </SidebarContent>
-        <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+        <SidebarFooter>
+          <div className="flex flex-col gap-2">
+            {/* Credit Meter - shown for all users */}
+            <div className="px-2">
+              <CreditMeterWrapper />
+            </div>
+            
+            {user ? (
+              <>
+                {/* Profile link for authenticated users */}
+                <div className="px-2">
+                  <Link href="/profile">
+                    <Button
+                      className="w-full justify-start"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <svg
+                        className="mr-2 size-4"
+                        fill="none"
+                        height="16"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        width="16"
+                      >
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      Profile
+                    </Button>
+                  </Link>
+                </div>
+                <SidebarUserNav user={user} />
+              </>
+            ) : (
+              /* Login/Register buttons for unauthenticated users */
+              <div className="flex flex-col gap-2 px-2">
+                <Link href="/login">
+                  <Button
+                    className="w-full"
+                    type="button"
+                    variant="default"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button
+                    className="w-full"
+                    type="button"
+                    variant="outline"
+                  >
+                    Register
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </SidebarFooter>
       </Sidebar>
 
       <AlertDialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>

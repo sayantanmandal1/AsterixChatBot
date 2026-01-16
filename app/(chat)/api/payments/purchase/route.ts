@@ -2,11 +2,10 @@ import { auth } from "@/app/(auth)/auth";
 import { ChatSDKError } from "@/lib/errors";
 import { getBalance } from "@/lib/services/credit-service";
 import { processPurchase } from "@/lib/services/payment-service";
-import { z } from "zod";
-
-const purchaseRequestSchema = z.object({
-  planId: z.string().uuid("Plan ID must be a valid UUID"),
-});
+import { RATE_LIMITS, withRateLimit } from "@/lib/rate-limit";
+import { withCSRFProtection } from "@/lib/csrf";
+import { purchaseRequestSchema, validateRequestBody } from "@/lib/validation/schemas";
+import { NextRequest } from "next/server";
 
 /**
  * POST /api/payments/purchase
@@ -17,12 +16,13 @@ const purchaseRequestSchema = z.object({
  * @param request - Request body containing planId
  * @returns Purchase details and new credit balance
  */
-export async function POST(request: Request) {
+async function handler(request: NextRequest) {
   try {
     const session = await auth();
 
     // Validate authentication - only authenticated users can purchase
     if (!session?.user) {
+      console.warn("Unauthenticated request to purchase endpoint");
       return new ChatSDKError(
         "unauthorized:chat",
         "Authentication required to purchase credits"
@@ -31,6 +31,9 @@ export async function POST(request: Request) {
 
     // Guest users cannot purchase - redirect to login
     if (session.user.type === "guest") {
+      console.warn("Guest user attempted to purchase credits", {
+        sessionId: session.user.id,
+      });
       return new ChatSDKError(
         "unauthorized:chat",
         "Guest users must register to purchase credits"
@@ -38,17 +41,34 @@ export async function POST(request: Request) {
     }
 
     // Parse and validate request body
-    const body = await request.json();
-    const validationResult = purchaseRequestSchema.safeParse(body);
-
-    if (!validationResult.success) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.warn("Invalid JSON in purchase request", {
+        userId: session.user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return new ChatSDKError(
         "bad_request:api",
-        `Invalid request body: ${validationResult.error.errors.map((e) => e.message).join(", ")}`
+        "Invalid JSON in request body"
       ).toResponse();
     }
 
-    const { planId } = validationResult.data;
+    const validation = validateRequestBody(purchaseRequestSchema, body);
+
+    if (!validation.success) {
+      console.warn("Invalid request body for purchase", {
+        userId: session.user.id,
+        errors: validation.errors,
+      });
+      return new ChatSDKError(
+        "bad_request:api",
+        `Invalid request body: ${validation.errors}`
+      ).toResponse();
+    }
+
+    const { planId } = validation.data;
 
     // Process the purchase
     const purchase = await processPurchase({
@@ -58,6 +78,14 @@ export async function POST(request: Request) {
 
     // Get updated balance
     const creditBalance = await getBalance(session.user.id);
+
+    console.log("Purchase processed successfully", {
+      userId: session.user.id,
+      planId,
+      purchaseId: purchase.id,
+      creditsAdded: purchase.creditsAdded,
+      newBalance: creditBalance.balance,
+    });
 
     return Response.json({
       success: true,
@@ -76,10 +104,16 @@ export async function POST(request: Request) {
       return error.toResponse();
     }
 
-    console.error("Failed to process purchase:", error);
+    console.error("Failed to process purchase via API", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return new ChatSDKError(
       "bad_request:api",
       "Failed to process purchase"
     ).toResponse();
   }
 }
+
+// Export with rate limiting and CSRF protection
+export const POST = withCSRFProtection(withRateLimit(handler, RATE_LIMITS.PAYMENT_PURCHASE));

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { ChatHeader } from "@/components/chat-header";
+import { CreditExhaustedModal } from "@/components/credit-exhausted-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,7 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useCreditBalance } from "@/hooks/use-credit-balance";
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -57,10 +59,14 @@ export function Chat({
 
   const { mutate } = useSWRConfig();
   const { setDataStream } = useDataStream();
+  const { balance, isGuest, updateBalance } = useCreditBalance();
 
   const [input, setInput] = useState<string>("");
   const [usage, setUsage] = useState<AppUsage | undefined>(initialLastContext);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+  const [showCreditExhaustedModal, setShowCreditExhaustedModal] = useState(false);
+  const [lastCreditDeduction, setLastCreditDeduction] = useState<number | null>(null);
+  const [messageCredits, setMessageCredits] = useState<Map<string, number>>(new Map());
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
 
@@ -101,6 +107,22 @@ export function Chat({
       if (dataPart.type === "data-usage") {
         setUsage(dataPart.data);
       }
+      if (dataPart.type === "data-credits") {
+        const creditData = dataPart.data;
+        setLastCreditDeduction(creditData.consumed);
+        updateBalance(creditData.newBalance, creditData.consumed);
+        
+        // Store credit consumption for the last assistant message
+        const lastAssistantMessage = messages.findLast(msg => msg.role === "assistant");
+        if (lastAssistantMessage) {
+          setMessageCredits(prev => new Map(prev).set(lastAssistantMessage.id, creditData.consumed));
+        }
+        
+        // Check if credits are exhausted
+        if (creditData.newBalance <= 0) {
+          setShowCreditExhaustedModal(true);
+        }
+      }
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
@@ -112,6 +134,9 @@ export function Chat({
           error.message?.includes("AI Gateway requires a valid credit card")
         ) {
           setShowCreditCardAlert(true);
+        } else if (error.type === "bad_request" && error.surface === "credits") {
+          // Handle insufficient credits error
+          setShowCreditExhaustedModal(true);
         } else {
           toast({
             type: "error",
@@ -173,6 +198,7 @@ export function Chat({
           setMessages={setMessages}
           status={status}
           votes={votes}
+          messageCredits={messageCredits}
         />
 
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
@@ -192,6 +218,7 @@ export function Chat({
               status={status}
               stop={stop}
               usage={usage}
+              disabled={balance <= 0}
             />
           )}
         </div>
@@ -244,6 +271,12 @@ export function Chat({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreditExhaustedModal
+        isOpen={showCreditExhaustedModal}
+        onOpenChange={setShowCreditExhaustedModal}
+        userType={isGuest ? "guest" : "authenticated"}
+      />
     </>
   );
 }

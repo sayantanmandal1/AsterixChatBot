@@ -104,8 +104,23 @@ export async function saveChat({
   }
 }
 
-export async function deleteChatById({ id }: { id: string }) {
+export async function deleteChatById({ id, userId }: { id: string; userId?: string }) {
   try {
+    // Verify ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, id), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     await db.delete(vote).where(eq(vote.chatId, id));
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
@@ -116,6 +131,9 @@ export async function deleteChatById({ id }: { id: string }) {
       .returning();
     return chatsDeleted;
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to delete chat by id"
@@ -230,9 +248,13 @@ export async function getChatsByUserId({
   }
 }
 
-export async function getChatById({ id }: { id: string }) {
+export async function getChatById({ id, userId }: { id: string; userId?: string }) {
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+    const conditions = userId 
+      ? and(eq(chat.id, id), eq(chat.userId, userId))
+      : eq(chat.id, id);
+    
+    const [selectedChat] = await db.select().from(chat).where(conditions);
     if (!selectedChat) {
       return null;
     }
@@ -251,14 +273,32 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
   }
 }
 
-export async function getMessagesByChatId({ id }: { id: string }) {
+export async function getMessagesByChatId({ id, userId }: { id: string; userId?: string }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, id), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     return await db
       .select()
       .from(message)
       .where(eq(message.chatId, id))
       .orderBy(asc(message.createdAt));
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get messages by chat id"
@@ -270,12 +310,29 @@ export async function voteMessage({
   chatId,
   messageId,
   type,
+  userId,
 }: {
   chatId: string;
   messageId: string;
   type: "up" | "down";
+  userId?: string;
 }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     const [existingVote] = await db
       .select()
       .from(vote)
@@ -293,14 +350,35 @@ export async function voteMessage({
       isUpvoted: type === "up",
     });
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError("bad_request:database", "Failed to vote message");
   }
 }
 
-export async function getVotesByChatId({ id }: { id: string }) {
+export async function getVotesByChatId({ id, userId }: { id: string; userId?: string }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, id), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     return await db.select().from(vote).where(eq(vote.chatId, id));
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get votes by chat id"
@@ -338,12 +416,16 @@ export async function saveDocument({
   }
 }
 
-export async function getDocumentsById({ id }: { id: string }) {
+export async function getDocumentsById({ id, userId }: { id: string; userId?: string }) {
   try {
+    const conditions = userId
+      ? and(eq(document.id, id), eq(document.userId, userId))
+      : eq(document.id, id);
+
     const documents = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(conditions)
       .orderBy(asc(document.createdAt));
 
     return documents;
@@ -355,12 +437,16 @@ export async function getDocumentsById({ id }: { id: string }) {
   }
 }
 
-export async function getDocumentById({ id }: { id: string }) {
+export async function getDocumentById({ id, userId }: { id: string; userId?: string }) {
   try {
+    const conditions = userId
+      ? and(eq(document.id, id), eq(document.userId, userId))
+      : eq(document.id, id);
+
     const [selectedDocument] = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(conditions)
       .orderBy(desc(document.createdAt));
 
     return selectedDocument;
@@ -375,11 +461,29 @@ export async function getDocumentById({ id }: { id: string }) {
 export async function deleteDocumentsByIdAfterTimestamp({
   id,
   timestamp,
+  userId,
 }: {
   id: string;
   timestamp: Date;
+  userId?: string;
 }) {
   try {
+    // Verify document ownership if userId is provided
+    if (userId) {
+      const [existingDocument] = await db
+        .select()
+        .from(document)
+        .where(and(eq(document.id, id), eq(document.userId, userId)))
+        .limit(1);
+      
+      if (!existingDocument) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Document not found or access denied"
+        );
+      }
+    }
+
     await db
       .delete(suggestion)
       .where(
@@ -394,6 +498,9 @@ export async function deleteDocumentsByIdAfterTimestamp({
       .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
       .returning();
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to delete documents by id after timestamp"
@@ -418,15 +525,36 @@ export async function saveSuggestions({
 
 export async function getSuggestionsByDocumentId({
   documentId,
+  userId,
 }: {
   documentId: string;
+  userId?: string;
 }) {
   try {
+    // Verify document ownership if userId is provided
+    if (userId) {
+      const [existingDocument] = await db
+        .select()
+        .from(document)
+        .where(and(eq(document.id, documentId), eq(document.userId, userId)))
+        .limit(1);
+      
+      if (!existingDocument) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Document not found or access denied"
+        );
+      }
+    }
+
     return await db
       .select()
       .from(suggestion)
       .where(eq(suggestion.documentId, documentId));
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get suggestions by document id"
@@ -448,11 +576,28 @@ export async function getMessageById({ id }: { id: string }) {
 export async function deleteMessagesByChatIdAfterTimestamp({
   chatId,
   timestamp,
+  userId,
 }: {
   chatId: string;
   timestamp: Date;
+  userId?: string;
 }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     const messagesToDelete = await db
       .select({ id: message.id })
       .from(message)
@@ -478,6 +623,9 @@ export async function deleteMessagesByChatIdAfterTimestamp({
         );
     }
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to delete messages by chat id after timestamp"
@@ -488,13 +636,33 @@ export async function deleteMessagesByChatIdAfterTimestamp({
 export async function updateChatVisibilityById({
   chatId,
   visibility,
+  userId,
 }: {
   chatId: string;
   visibility: "private" | "public";
+  userId?: string;
 }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to update chat visibility by id"
@@ -574,8 +742,23 @@ export async function createStreamId({
   }
 }
 
-export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
+export async function getStreamIdsByChatId({ chatId, userId }: { chatId: string; userId?: string }) {
   try {
+    // Verify chat ownership if userId is provided
+    if (userId) {
+      const [existingChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+      
+      if (!existingChat) {
+        throw new ChatSDKError(
+          "forbidden:access_denied",
+          "Chat not found or access denied"
+        );
+      }
+    }
+
     const streamIds = await db
       .select({ id: stream.id })
       .from(stream)
@@ -585,6 +768,9 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 
     return streamIds.map(({ id }) => id);
   } catch (_error) {
+    if (_error instanceof ChatSDKError) {
+      throw _error;
+    }
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get stream ids by chat id"

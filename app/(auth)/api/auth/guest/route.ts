@@ -14,7 +14,8 @@ export async function GET(request: Request) {
   });
 
   if (token) {
-    return NextResponse.redirect(new URL("/", request.url));
+    // If already authenticated, redirect to the intended destination
+    return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
   return signIn("guest", { redirect: true, redirectTo: redirectUrl });

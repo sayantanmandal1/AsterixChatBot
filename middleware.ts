@@ -13,7 +13,19 @@ export async function middleware(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
+  // Allow auth routes to pass through
   if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // Allow cron endpoints to pass through (they use Bearer token auth)
+  if (pathname.startsWith("/api/cron")) {
+    return NextResponse.next();
+  }
+
+  // Allow public pages to pass through without authentication
+  const publicPages = ["/", "/login", "/register"];
+  if (publicPages.includes(pathname)) {
     return NextResponse.next();
   }
 
@@ -33,6 +45,7 @@ export async function middleware(request: NextRequest) {
 
   const isGuest = guestRegex.test(token?.email ?? "");
 
+  // Redirect authenticated users away from login/register pages
   if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }

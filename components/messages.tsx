@@ -21,6 +21,7 @@ type MessagesProps = {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   selectedModelId: string;
+  messageCredits?: Map<string, number>;
 };
 
 function PureMessages({
@@ -32,6 +33,7 @@ function PureMessages({
   regenerate,
   isReadonly,
   selectedModelId,
+  messageCredits,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -88,6 +90,7 @@ function PureMessages({
                   ? votes.find((vote) => vote.messageId === message.id)
                   : undefined
               }
+              creditsConsumed={messageCredits?.get(message.id)}
             />
           ))}
 
