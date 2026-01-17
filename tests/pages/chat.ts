@@ -115,8 +115,16 @@ export class ChatPage {
       throw new Error(`Model with id ${chatModelId} not found`);
     }
 
-    await this.page.getByTestId("model-selector").click();
+    // Wait for model selector to be visible and clickable
+    const modelSelector = this.page.getByTestId("model-selector");
+    await modelSelector.waitFor({ state: "visible", timeout: 15000 });
+    await modelSelector.scrollIntoViewIfNeeded();
+    await modelSelector.click();
+    
+    // Wait for dropdown to open and select the model
+    await this.page.getByTestId(`model-selector-item-${chatModelId}`).waitFor({ state: "visible", timeout: 5000 });
     await this.page.getByTestId(`model-selector-item-${chatModelId}`).click();
+    
     expect(await this.getSelectedModel()).toBe(chatModel.name);
   }
 

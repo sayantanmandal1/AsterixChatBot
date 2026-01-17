@@ -15,7 +15,7 @@
 .kiro/specs
 # production
 /build
-
+playwright
 # misc
 .DS_Store
 *.pem

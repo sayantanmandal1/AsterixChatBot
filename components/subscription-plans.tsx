@@ -20,6 +20,9 @@ interface SubscriptionPlansProps {
 // Icon mapping for plan names
 const getIconForPlan = (name: string) => {
   const lowerName = name.toLowerCase();
+  if (lowerName.includes("free")) {
+    return Sparkles;
+  }
   if (lowerName.includes("starter") || lowerName.includes("basic")) {
     return Sparkles;
   }
@@ -60,12 +63,13 @@ export default function SubscriptionPlans({ plans, onSelectPlan }: SubscriptionP
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-7xl flex-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="mx-auto grid w-full max-w-7xl flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {plans.map((plan, index) => {
         const Icon = getIconForPlan(plan.name);
         const isRecommended = isRecommendedPlan(plan, plans);
         const { gradient, shadowColor } = getGradientForPlan(index, plans.length);
         const isSelected = selectedPlanId === plan.id;
+        const isFree = Number.parseFloat(plan.price.toString()) === 0;
 
         return (
           <div
@@ -102,9 +106,13 @@ export default function SubscriptionPlans({ plans, onSelectPlan }: SubscriptionP
 
               {/* Price */}
               <div className="mb-3">
-                <span className="font-bold text-3xl text-white">
-                  ${plan.price.toFixed(2)}
-                </span>
+                {isFree ? (
+                  <span className="font-bold text-3xl text-white">Free</span>
+                ) : (
+                  <span className="font-bold text-3xl text-white">
+                    ${plan.price.toFixed(2)}
+                  </span>
+                )}
               </div>
 
               {/* Description */}
@@ -154,7 +162,7 @@ export default function SubscriptionPlans({ plans, onSelectPlan }: SubscriptionP
                 onClick={() => handleSelectPlan(plan)}
                 type="button"
               >
-                {isSelected ? "Selected" : "Select Plan"}
+                {isSelected ? "Selected" : isFree ? "Get Started" : "Select Plan"}
               </button>
             </div>
           </div>

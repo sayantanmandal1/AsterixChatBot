@@ -40,16 +40,24 @@ export function PaymentModal({
     await onConfirm();
   };
 
+  const isFree = selectedPlan.price === 0;
+
   return (
     <AlertDialog onOpenChange={onClose} open={isOpen}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-2xl">
-            <CreditCard className="h-6 w-6 text-purple-500" />
-            Confirm Purchase
+            {isFree ? (
+              <Sparkles className="h-6 w-6 text-purple-500" />
+            ) : (
+              <CreditCard className="h-6 w-6 text-purple-500" />
+            )}
+            {isFree ? "Claim Free Credits" : "Confirm Purchase"}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-left">
-            Review your purchase details before confirming
+            {isFree
+              ? "Claim your free credits to get started"
+              : "Review your purchase details before confirming"}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -89,7 +97,7 @@ export function PaymentModal({
               <div className="flex items-center justify-between">
                 <span className="font-semibold">Total</span>
                 <span className="font-bold text-xl">
-                  ${selectedPlan.price.toFixed(2)}
+                  {isFree ? "Free" : `$${selectedPlan.price.toFixed(2)}`}
                 </span>
               </div>
             </div>
@@ -122,13 +130,15 @@ export function PaymentModal({
           </div>
 
           {/* Mock Payment Notice */}
-          <div className="rounded-lg bg-blue-500/10 p-3">
-            <p className="text-blue-400 text-xs">
-              <strong>Note:</strong> This is a mock payment system. No actual
-              charges will be made. Credits will be added to your account
-              immediately upon confirmation.
-            </p>
-          </div>
+          {!isFree && (
+            <div className="rounded-lg bg-blue-500/10 p-3">
+              <p className="text-blue-400 text-xs">
+                <strong>Note:</strong> This is a mock payment system. No actual
+                charges will be made. Credits will be added to your account
+                immediately upon confirmation.
+              </p>
+            </div>
+          )}
         </div>
 
         <AlertDialogFooter>
@@ -137,7 +147,11 @@ export function PaymentModal({
             disabled={isProcessing}
             onClick={handleConfirm}
           >
-            {isProcessing ? "Processing..." : "Confirm Purchase"}
+            {isProcessing
+              ? "Processing..."
+              : isFree
+                ? "Claim Credits"
+                : "Confirm Purchase"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

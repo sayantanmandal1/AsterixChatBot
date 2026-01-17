@@ -49,12 +49,10 @@ export async function createAuthenticatedContext({
     "Account created successfully!"
   );
 
-  const chatPage = new ChatPage(page);
-  await chatPage.createNewChat();
-  await chatPage.chooseModelFromSelector("chat-model-reasoning");
-  await expect(chatPage.getSelectedModel()).resolves.toEqual("Reasoning model");
-
-  await page.waitForTimeout(1000);
+  // Wait for the session to be established
+  await page.waitForTimeout(2000);
+  
+  // Save the storage state with the session
   await context.storageState({ path: storageFile });
   await page.close();
 

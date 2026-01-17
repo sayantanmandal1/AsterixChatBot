@@ -19,6 +19,14 @@ const seedPlans = async () => {
 
   const plans = [
     {
+      name: "Free",
+      credits: "200.00",
+      price: "0.00",
+      description: "Get started with basic features",
+      isActive: true,
+      displayOrder: 0,
+    },
+    {
       name: "Starter",
       credits: "500.00",
       price: "5.00",
