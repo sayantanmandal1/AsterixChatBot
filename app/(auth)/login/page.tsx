@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -52,6 +53,14 @@ export default function Page() {
   return (
     <div className="flex h-dvh w-screen items-start justify-center bg-background pt-12 md:items-center md:pt-0">
       <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center gap-2 px-4 text-gray-600 text-sm transition-colors hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-100 sm:px-16"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
           <h3 className="font-semibold text-xl dark:text-zinc-50">Sign In</h3>
           <p className="text-gray-500 text-sm dark:text-zinc-400">
