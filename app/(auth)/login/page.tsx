@@ -52,7 +52,7 @@ export default function Page() {
 
   return (
     <div className="flex h-dvh w-screen items-start justify-center bg-background pt-12 md:items-center md:pt-0">
-      <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl px-1">
+      <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl">
         <button
           type="button"
           onClick={() => router.back()}
