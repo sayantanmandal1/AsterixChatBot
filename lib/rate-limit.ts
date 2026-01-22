@@ -63,18 +63,40 @@ class InMemoryStore {
 // Redis store for production
 class RedisStore {
   private client: ReturnType<typeof createClient> | null = null;
+  private connecting: Promise<void> | null = null;
 
   constructor() {
     if (process.env.REDIS_URL) {
       this.client = createClient({
         url: process.env.REDIS_URL,
       });
+      
+      // Connect the client
+      this.connecting = this.client.connect()
+        .then(() => {
+          // Connection successful
+        })
+        .catch((error) => {
+          console.error("Failed to connect to Redis:", error);
+          this.client = null;
+          this.connecting = null;
+        });
     }
   }
 
   async increment(key: string, windowMs: number): Promise<{ count: number; resetTime: number }> {
     if (!this.client) {
       throw new Error("Redis client not initialized");
+    }
+
+    // Wait for connection if still connecting
+    if (this.connecting) {
+      await this.connecting;
+    }
+
+    // Check if client is still valid after connection
+    if (!this.client || !this.client.isOpen) {
+      throw new Error("Redis client is not connected");
     }
 
     const now = Date.now();

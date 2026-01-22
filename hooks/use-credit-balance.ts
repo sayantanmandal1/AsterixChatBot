@@ -59,6 +59,17 @@ export function useCreditBalance(): UseCreditBalanceReturn {
   // Fetch balance on mount
   useEffect(() => {
     fetchBalance();
+    
+    // Listen for credit update events
+    const handleCreditUpdate = () => {
+      fetchBalance();
+    };
+    
+    window.addEventListener('creditBalanceUpdated', handleCreditUpdate);
+    
+    return () => {
+      window.removeEventListener('creditBalanceUpdated', handleCreditUpdate);
+    };
   }, [fetchBalance]);
 
   // Optimistic update function

@@ -139,6 +139,9 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (!equal(prevProps.votes, nextProps.votes)) {
     return false;
   }
+  if (!equal(prevProps.messageCredits, nextProps.messageCredits)) {
+    return false;
+  }
 
   return false;
 });

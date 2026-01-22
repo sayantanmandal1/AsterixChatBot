@@ -313,6 +313,9 @@ export const PreviewMessage = memo(
     if (!equal(prevProps.vote, nextProps.vote)) {
       return false;
     }
+    if (prevProps.creditsConsumed !== nextProps.creditsConsumed) {
+      return false;
+    }
 
     return false;
   }

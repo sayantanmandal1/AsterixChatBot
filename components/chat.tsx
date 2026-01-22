@@ -69,6 +69,7 @@ export function Chat({
   const [messageCredits, setMessageCredits] = useState<Map<string, number>>(new Map());
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
+  const pendingCreditDeduction = useRef<number | null>(null);
 
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -112,11 +113,11 @@ export function Chat({
         setLastCreditDeduction(creditData.consumed);
         updateBalance(creditData.newBalance, creditData.consumed);
         
-        // Store credit consumption for the last assistant message
-        const lastAssistantMessage = messages.findLast(msg => msg.role === "assistant");
-        if (lastAssistantMessage) {
-          setMessageCredits(prev => new Map(prev).set(lastAssistantMessage.id, creditData.consumed));
-        }
+        // Store pending credit deduction to apply after message is added
+        pendingCreditDeduction.current = creditData.consumed;
+        
+        // Dispatch event to trigger balance refresh in other components
+        window.dispatchEvent(new CustomEvent('creditBalanceUpdated'));
         
         // Check if credits are exhausted
         if (creditData.newBalance <= 0) {
@@ -126,6 +127,19 @@ export function Chat({
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
+      
+      // Apply pending credit deduction to the last assistant message
+      if (pendingCreditDeduction.current !== null) {
+        const lastAssistantMessage = messages.findLast(msg => msg.role === "assistant");
+        if (lastAssistantMessage) {
+          setMessageCredits(prev => {
+            const newMap = new Map(prev);
+            newMap.set(lastAssistantMessage.id, pendingCreditDeduction.current!);
+            return newMap;
+          });
+        }
+        pendingCreditDeduction.current = null;
+      }
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
